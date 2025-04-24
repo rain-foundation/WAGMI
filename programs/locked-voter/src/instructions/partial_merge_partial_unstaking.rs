@@ -21,14 +21,17 @@ pub struct PartialMergePartialUnstaking<'info> {
 
 impl<'info> PartialMergePartialUnstaking<'info> {
     pub fn partial_merge_partial_unstaking(&mut self, amount: u64) -> Result<()> {
+        invariant!(amount > 0, AmountIsZero);
+        invariant!(amount < self.partial_unstake.amount, AmountIsTooLarge);
+
         let partial_unstake_pk = self.partial_unstake.key();
         let escrow_pk = self.escrow.key();
 
-        let partial_unstake = &self.partial_unstake;
         let escrow = &mut self.escrow;
+        let partial_unstake = &mut self.partial_unstake;
 
         unwrap_int!(escrow.merge_partial_unstaking_amount(amount));
-        unwrap_int!(partial_unstake.merge_partial_unstaking_amount(amount));
+        unwrap_int!(partial_unstake.cancel_partial_unstaking_amount(amount));
 
         emit!(PartialMergePartialUnstakingEvent {
             partial_unstake: partial_unstake_pk,
@@ -50,8 +53,7 @@ impl<'info> Validate<'info> for PartialMergePartialUnstaking<'info> {
             lock_duration >= self.locker.params.min_stake_duration,
             crate::ErrorCode::LockupDurationTooShort
         );
-        require_gt!(amount, 0, crate::ErrorCode::AmountIsZero);
-        require_lt!(amount, partial_unstake.amount, crate::ErrorCode::AmountIsTooLarge);
+
         Ok(())
     }
 }

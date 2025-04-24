@@ -178,7 +178,8 @@ impl PartialUnstaking {
     /// LEN of PartialUnstaking
     pub const LEN: usize = std::mem::size_of::<Pubkey>() + 8 + 8 + 16 * 6;
 
-    pub fn merge_partial_unstaking_amount(&mut self, amount: u64) -> Option<()> {
+    /// decrement partial unstaking amount
+    pub fn cancel_partial_unstaking_amount(&mut self, amount: u64) -> Option<()> {
         self.amount = self.amount.checked_sub(amount)?;
         Some(())
     }
