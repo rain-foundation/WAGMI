@@ -399,4 +399,64 @@ describe("Partial unstaking", () => {
 
     });
 
+    it("users open partial unstaking and partial merge it", async () => {
+        const userWallet = new Wallet(userKeypair);
+        const voterProgram = createLockedVoterProgram(userWallet, LOCKED_VOTER_PROGRAM_ID);
+        const [escrow, _bump] = deriveEscrow(locker, userWallet.publicKey, LOCKED_VOTER_PROGRAM_ID);
+
+        {
+            let escrowState = await voterProgram.account.escrow.fetch(escrow);
+            expect(escrowState.amount.toString()).to.equal(lockAmount.toString());
+            expect(escrowState.partialUnstakingAmount.toString()).to.equal("0");
+        }
+
+
+        const partialUnstakeKP = web3.Keypair.generate();
+        const memo = "user_id_2369";
+        // open partial unstaking
+        await voterProgram.methods.openPartialUnstaking(partialUnstakingAmount, memo).accounts({
+            escrow,
+            locker,
+            partialUnstake: partialUnstakeKP.publicKey,
+            owner: userKeypair.publicKey,
+            systemProgram: web3.SystemProgram.programId,
+        }).signers([
+            partialUnstakeKP, userKeypair
+        ]).rpc();
+        {
+            let escrowState = await voterProgram.account.escrow.fetch(escrow);
+            expect(escrowState.amount.toString()).to.equal(lockAmount.sub(partialUnstakingAmount).toString());
+            expect(escrowState.partialUnstakingAmount.toString()).to.equal(partialUnstakingAmount.toString());
+
+            let partialUnstakingState = await voterProgram.account.partialUnstaking.fetch(partialUnstakeKP.publicKey);
+            expect(partialUnstakingState.amount.toString()).to.equal(partialUnstakingAmount.toString());
+            expect(partialUnstakingState.escrow.toString()).to.equal(escrow.toString());
+            expect(partialUnstakingState.expiration.toString()).to.not.equal("0");
+            expect(partialUnstakingState.memo).to.equal(memo);
+        }
+
+        const partialMergeAmount = partialUnstakingAmount.divn(2);
+        // partial merge 
+        await voterProgram.methods.partialMergePartialUnstaking(partialMergeAmount.toNumber()).accounts({
+            escrow,
+            locker,
+            partialUnstake: partialUnstakeKP.publicKey,
+            owner: userKeypair.publicKey,
+        }).signers([
+            userKeypair
+        ]).rpc();
+
+        {
+            let escrowState = await voterProgram.account.escrow.fetch(escrow);
+            expect(escrowState.amount.toString()).to.equal(lockAmount.sub(partialMergeAmount).toString());
+            expect(escrowState.partialUnstakingAmount.toString()).to.equal((partialUnstakingAmount.sub(partialMergeAmount)).toString());
+
+            let partialUnstakingState = await voterProgram.account.partialUnstaking.fetch(partialUnstakeKP.publicKey);
+            expect(partialUnstakingState.amount.toString()).to.equal((partialUnstakingAmount.sub(partialMergeAmount)).toString());
+            expect(partialUnstakingState.escrow.toString()).to.equal(escrow.toString());
+            expect(partialUnstakingState.expiration.toString()).to.not.equal("0");
+            expect(partialUnstakingState.memo).to.equal(memo);
+        }
+    });
+
 });
