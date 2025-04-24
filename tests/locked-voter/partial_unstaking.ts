@@ -423,6 +423,7 @@ describe("Partial unstaking", () => {
         }).signers([
             partialUnstakeKP, userKeypair
         ]).rpc();
+        
         {
             let escrowState = await voterProgram.account.escrow.fetch(escrow);
             expect(escrowState.amount.toString()).to.equal(lockAmount.sub(partialUnstakingAmount).toString());
