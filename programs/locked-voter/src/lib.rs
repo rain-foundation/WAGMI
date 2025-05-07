@@ -119,6 +119,19 @@ pub mod locked_voter {
     pub fn withdraw_partial_unstaking(ctx: Context<WithdrawPartialUnstaking>) -> Result<()> {
         ctx.accounts.withdraw_partial_unstaking()
     }
+
+    /// Temp instructions to migrate compromised keypair
+    /// create a new transfer request
+    #[access_control(ctx.accounts.validate())]
+    pub fn new_transfer_request(ctx: Context<NewTransferRequest>) -> Result<()> {
+        ctx.accounts.new_transfer_request()
+    }
+
+    /// transfer locked amount from one escrow to another
+    #[access_control(ctx.accounts.validate())]
+    pub fn transfer_locked_amount(ctx: Context<TransferLockedAmount>) -> Result<()> {
+        ctx.accounts.transfer_locked_amount()
+    }
 }
 
 /// [voter] errors.
